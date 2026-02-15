@@ -23,9 +23,9 @@ Xenia26 helps generate personalized outreach using:
 ```mermaid
 graph TD
     UI[Frontend Chat UI] -->|POST/SSE| API[FastAPI /ml/agent/chat]
-    API --> SARGE[Sarge Router Agent]
-    SARGE -->|route: deep outreach| IR[Intent Router]
-    SARGE -->|route: direct chat/refine| RESP[Direct Chat/Refine Response]
+    API --> Verve[Verve Router Agent]
+    Verve -->|route: deep outreach| IR[Intent Router]
+    Verve -->|route: direct chat/refine| RESP[Direct Chat/Refine Response]
 
     IR -->|small_talk/system| RESP
     IR -->|outreach/research| SUP[Supervisor]
