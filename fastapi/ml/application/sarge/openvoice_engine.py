@@ -2,13 +2,51 @@
 import sys
 import os
 import types
+from collections.abc import Iterable
+import numpy as np
 import torch
 from loguru import logger
 
-# Add openvoice_lib to sys.path
-lib_path = os.path.join(os.path.dirname(__file__), 'openvoice_lib')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
+# Some dependency combinations (or broken numpy installs) can miss this legacy helper.
+# Patch it early so downstream TTS libs don't crash on import/runtime.
+if not hasattr(np, "iterable"):
+    np.iterable = lambda obj: isinstance(obj, Iterable)  # type: ignore[attr-defined]
+
+# Support both layouts:
+# 1) .../openvoice_lib/openvoice
+# 2) .../openvoice_lib/OpenVoice/openvoice
+lib_path = os.path.join(os.path.dirname(__file__), "openvoice_lib")
+openvoice_root_candidates = [
+    lib_path,
+    os.path.join(lib_path, "OpenVoice"),
+]
+for candidate in openvoice_root_candidates:
+    if os.path.isdir(candidate) and candidate not in sys.path:
+        sys.path.insert(0, candidate)
+
+
+def _resolve_openvoice_root() -> str:
+    for candidate in openvoice_root_candidates:
+        if os.path.isdir(os.path.join(candidate, "openvoice")):
+            return candidate
+    return lib_path
+
+
+def _resolve_checkpoints_dir(openvoice_root: str) -> str:
+    ckpt_candidates = [
+        os.path.join(openvoice_root, "checkpoints_v2"),
+        os.path.join(lib_path, "checkpoints_v2"),
+        os.path.join(lib_path, "OpenVoice", "checkpoints_v2"),
+    ]
+    for ckpt_dir in ckpt_candidates:
+        cfg = os.path.join(ckpt_dir, "converter", "config.json")
+        ckpt = os.path.join(ckpt_dir, "converter", "checkpoint.pth")
+        if os.path.exists(cfg) and os.path.exists(ckpt):
+            return ckpt_dir
+    return ckpt_candidates[0]
+
+
+OPENVOICE_ROOT = _resolve_openvoice_root()
 
 def _ensure_unidic_compat():
     """
@@ -62,7 +100,11 @@ try:
     from openvoice.api import ToneColorConverter
     from melo.api import TTS
 except ImportError as e:
-    logger.error(f"🎙️ OpenVoice: Failed to import required modules - {e}")
+    searched_paths = ", ".join(openvoice_root_candidates)
+    logger.error(
+        f"OpenVoice: Failed to import required modules ({e}). "
+        f"Searched roots: {searched_paths}"
+    )
     raise
 
 class OpenVoiceEngine:
@@ -71,17 +113,23 @@ class OpenVoiceEngine:
         logger.info(f"🎙️ OpenVoice: Initializing on {self.device}")
         
         # Paths
-        self.ckpt_dir = os.path.join(lib_path, 'checkpoints_v2')
-        self.converter_path = os.path.join(self.ckpt_dir, 'converter')
+        self.ckpt_dir = _resolve_checkpoints_dir(OPENVOICE_ROOT)
+        self.converter_path = os.path.join(self.ckpt_dir, "converter")
+        converter_config = os.path.join(self.converter_path, "config.json")
+        converter_ckpt = os.path.join(self.converter_path, "checkpoint.pth")
+        if not (os.path.exists(converter_config) and os.path.exists(converter_ckpt)):
+            raise FileNotFoundError(
+                "OpenVoice checkpoints not found. Expected converter files under "
+                f"'{self.ckpt_dir}'. Download checkpoints_v2 and place them under "
+                f"'{lib_path}/checkpoints_v2' (or '{lib_path}/OpenVoice/checkpoints_v2')."
+            )
         
         # Load ToneColorConverter
         self.tone_color_converter = ToneColorConverter(
-            os.path.join(self.converter_path, 'config.json'), 
+            converter_config,
             device=self.device
         )
-        self.tone_color_converter.load_ckpt(
-            os.path.join(self.converter_path, 'checkpoint.pth')
-        )
+        self.tone_color_converter.load_ckpt(converter_ckpt)
         
         # Load Base TTS (MeloTTS)
         _ensure_nltk_assets()

@@ -55,13 +55,20 @@ def get_tts():
         raise RuntimeError(str(_TTS_IMPORT_ERROR))
 
     if _tts is None:
-        # Check if assets/speaker.wav exists for cloning, otherwise use default
+        # Check if assets/speaker.wav exists for cloning prompt bootstrap.
         speaker_wav = "assets/speaker.wav"
         if not os.path.exists(speaker_wav) or os.path.getsize(speaker_wav) == 0:
             speaker_wav = None
-            logger.warning("TTS: No speaker.wav found in assets/, using default voice.")
+            logger.warning("TTS: No speaker.wav found in assets/, waiting for user voice profile.")
 
-        _tts = XTTSEngine(speaker_wav=speaker_wav)
+        try:
+            _tts = XTTSEngine(speaker_wav=speaker_wav)
+        except Exception as e:
+            raise RuntimeError(
+                "Qwen TTS initialization failed. Ensure Qwen3-TTS 0.6B model is available "
+                "(Qwen/Qwen3-TTS-12Hz-0.6B-Base) and network access to Hugging Face is working. "
+                f"Original error: {e}"
+            ) from e
     return _tts
 
 

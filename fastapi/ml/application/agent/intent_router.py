@@ -8,6 +8,7 @@ topic-lock + search keywords BEFORE any tool / LLM pipeline runs.
 import re
 from typing import Optional, List
 
+from langsmith import traceable
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -47,6 +48,7 @@ class TopicLock(BaseModel):
 
 # ── Core functions ────────────────────────────────────────────────────
 
+@traceable(name="Intent Router - Classify Intent")
 def classify_intent(user_instruction: str) -> IntentResult:
     """
     Always uses LLM for intent classification and response generation.
@@ -102,6 +104,7 @@ def classify_intent(user_instruction: str) -> IntentResult:
         return IntentResult(category="outreach_task", confidence=0.5, direct_response=None)
 
 
+@traceable(name="Intent Router - Extract Topic")
 def extract_topic(user_instruction: str) -> TopicLock:
     """
     Extract the primary topic, domain keywords, and tone from the user
@@ -158,6 +161,7 @@ def extract_topic(user_instruction: str) -> TopicLock:
         )
 
 
+@traceable(name="Intent Router - Assess Knowledge Confidence")
 def assess_knowledge_confidence(topic: str, keywords: List[str]) -> bool:
     """
     Return True if the topic is common enough that web search can be skipped.
@@ -187,6 +191,7 @@ def assess_knowledge_confidence(topic: str, keywords: List[str]) -> bool:
 
 # ── Graph node wrapper ────────────────────────────────────────────────
 
+@traceable(name="Intent Router Node")
 def intent_router_node(state: AgentState) -> dict:
     """
     LangGraph node.  Runs intent classification + topic extraction.

@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_ollama import ChatOllama
+from langsmith import traceable
 
 try:
     from ddgs import DDGS
@@ -1078,6 +1079,7 @@ def _wikipedia_search(conf: Configuration, query: str, max_results: int = 2) -> 
     return rows
 
 
+@traceable(name="Deep Research - Orchestrator")
 async def orchestrator(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     conf = Configuration.from_runnable_config(config)
     topic = str(state.get("topic", "")).strip() or "Offline AI newsroom"
@@ -1135,6 +1137,7 @@ async def research_worker(state: WorkerState, config: RunnableConfig) -> Dict[st
     root_topic = _extract_topic_focus(str(state.get("topic", "")).strip()) or str(state.get("topic", "")).strip()
     if not sub_topic:
         return {"gathered_notes": [], "image_candidates": [], "logs": ["[WORKER] Skipped empty sub-topic."]}
+@traceable(name="Deep Research - Research Worker")
 async def research_worker(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     conf = Configuration.from_runnable_config(config)
     outline = state.get("outline", []) or []
@@ -1280,6 +1283,7 @@ async def research_worker(state: AgentState, config: RunnableConfig) -> Dict[str
     }
 
 
+@traceable(name="Deep Research - Synthesizer")
 async def synthesizer(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     conf = Configuration.from_runnable_config(config)
     notes = state.get("gathered_notes", []) or []
@@ -1332,6 +1336,7 @@ async def synthesizer(state: AgentState, config: RunnableConfig) -> Dict[str, An
     }
 
 
+@traceable(name="Deep Research - Planner")
 async def planner(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     conf = Configuration.from_runnable_config(config)
     topic = str(state.get("topic", "")).strip()
@@ -1395,6 +1400,7 @@ async def planner(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     }
 
 
+@traceable(name="Deep Research - Writer")
 async def writer(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     conf = Configuration.from_runnable_config(config)
     outline = state.get("outline", []) or []
@@ -1563,6 +1569,7 @@ async def writer(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     }
 
 
+@traceable(name="Deep Research - Publisher")
 def publisher(state: AgentState) -> Dict[str, Any]:
     """Combines all draft sections into the final article."""
     drafts = state.get("draft_sections", {})
@@ -1584,6 +1591,7 @@ def publisher(state: AgentState) -> Dict[str, Any]:
     }
 
 
+@traceable(name="Deep Research - Editor")
 async def editor(state: AgentState, config: RunnableConfig) -> Dict[str, Any]:
     conf = Configuration.from_runnable_config(config)
     ordered_sections = _sorted_section_items(state.get("draft_sections", {}))

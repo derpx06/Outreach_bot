@@ -7,6 +7,7 @@ Xenia26 is a multi-service AI outreach platform:
 
 For full design details, see:
 - `PROJECT_ARCHITECTURE.md`
+- `AGENT_ARCHITECTURE_MAP.md`
 - `fastapi/ml/application/agent/ARCHITECTURE.md`
 
 ## What The Project Does
@@ -23,9 +24,9 @@ Xenia26 helps generate personalized outreach using:
 ```mermaid
 graph TD
     UI[Frontend Chat UI] -->|POST/SSE| API[FastAPI /ml/agent/chat]
-    API --> SARGE[Sarge Router Agent]
-    SARGE -->|route: deep outreach| IR[Intent Router]
-    SARGE -->|route: direct chat/refine| RESP[Direct Chat/Refine Response]
+    API --> Verve[Verve Router Agent]
+    Verve -->|route: deep outreach| IR[Intent Router]
+    Verve -->|route: direct chat/refine| RESP[Direct Chat/Refine Response]
 
     IR -->|small_talk/system| RESP
     IR -->|outreach/research| SUP[Supervisor]
@@ -42,6 +43,7 @@ graph TD
 ```
 
 For deeper node-level docs, see:
+- `AGENT_ARCHITECTURE_MAP.md`
 - `fastapi/ml/application/agent/ARCHITECTURE.md`
 - `PROJECT_ARCHITECTURE.md`
 
@@ -119,6 +121,15 @@ npm install
 cd fastapi
 uv sync
 ```
+
+### Qwen3-TTS 0.6B Setup (required for voice cloning)
+
+```bash
+cd fastapi
+powershell -ExecutionPolicy Bypass -File scripts/setup_qwen_tts.ps1
+```
+
+Then set `QWEN_TTS_MODEL=./models/Qwen3-TTS-12Hz-0.6B-Base` in `fastapi/.env` if you want fully local loading.
 
 ## Run The Project (3 Terminals)
 

@@ -1,8 +1,10 @@
 from typing import Literal
 from loguru import logger
+from langsmith import traceable
 from .schemas import AgentState
 from .helpers import ensure_context
 
+@traceable(name="Supervisor Node")
 def supervisor_node(state: AgentState) -> AgentState:
     """
     The Brain of the Hive Mind.

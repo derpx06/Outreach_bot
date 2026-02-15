@@ -48,6 +48,7 @@ def route_intent(state: AgentState) -> str:
     return "mention_context"
 
 
+@traceable(name="Direct Response Node")
 def direct_response_node(state: AgentState) -> dict:
     """Package a direct response for pipeline-bypass cases."""
     resp = _state_get(state, "direct_response") or "Hey! What can I help you with?"
@@ -61,6 +62,7 @@ def route_supervisor(state: AgentState) -> str:
     return _state_get(state, "next_step") or END
 
 
+@traceable(name="Parallel Analysis Node")
 async def parallel_analysis_node(state: AgentState) -> AgentState:
     """
     Run profiler and strategist concurrently without LangGraph ParallelNode.
@@ -226,6 +228,7 @@ async def stream_agent(
         }
 
 
+@traceable(name="Stream Agent Events")
 async def stream_agent_events(
     target_url: str,
     user_instruction: str,

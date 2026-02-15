@@ -126,7 +126,7 @@ export default function Dashboard() {
           <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPI_Card
               title="Total Leads"
-              value="12,450"
+              value="43"
               trend="+12%"
               icon={Users}
               color="text-blue-400"
@@ -135,7 +135,7 @@ export default function Dashboard() {
             />
             <KPI_Card
               title="Emails Sent"
-              value="8,230"
+              value="30"
               trend="+5.4%"
               icon={Mail}
               color="text-purple-400"
@@ -153,7 +153,7 @@ export default function Dashboard() {
             />
             <KPI_Card
               title="AI Credits"
-              value="840"
+              value="12"
               trend="Unlimited"
               icon={BrainCircuit}
               color="text-amber-400"

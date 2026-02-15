@@ -25,6 +25,8 @@ get_tts = None
 DEEP_RESEARCH_AVAILABLE = False
 DEEP_RESEARCH_IMPORT_ERROR = "Deep researcher not initialized"
 deep_research_graph = None
+run_deep_research = None
+stream_deep_research = None
 import uuid
 import os
 import asyncio
@@ -82,14 +84,20 @@ def _ensure_sarge_loaded() -> bool:
 
 
 def _ensure_deep_research_loaded() -> bool:
-    global DEEP_RESEARCH_AVAILABLE, DEEP_RESEARCH_IMPORT_ERROR, deep_research_graph
+    global DEEP_RESEARCH_AVAILABLE, DEEP_RESEARCH_IMPORT_ERROR, deep_research_graph, run_deep_research, stream_deep_research
 
-    if DEEP_RESEARCH_AVAILABLE and deep_research_graph:
+    if DEEP_RESEARCH_AVAILABLE and deep_research_graph and run_deep_research and stream_deep_research:
         return True
 
     try:
-        from ml.ollama_deep_researcher.graph import graph as _deep_research_graph
+        from ml.ollama_deep_researcher.graph import (
+            graph as _deep_research_graph,
+            run_deep_research as _run_deep_research,
+            stream_deep_research as _stream_deep_research,
+        )
         deep_research_graph = _deep_research_graph
+        run_deep_research = _run_deep_research
+        stream_deep_research = _stream_deep_research
         DEEP_RESEARCH_AVAILABLE = True
         DEEP_RESEARCH_IMPORT_ERROR = None
         return True
@@ -190,6 +198,32 @@ def _sanitize_default_voice_id(voice_id: Optional[str]) -> Optional[str]:
     if not voice_id:
         return None
     return voice_id.strip()
+
+
+def _extract_tts_body_text(text: str) -> str:
+    """
+    Remove email/header boilerplate so TTS reads the actual message body.
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+
+    # Remove common label-only lines at the start.
+    lines = [ln.rstrip() for ln in raw.splitlines()]
+    while lines and re.match(r"^\s*(email|message|draft)\s*:?\s*$", lines[0], flags=re.IGNORECASE):
+        lines.pop(0)
+
+    # Drop header-style lines (Subject/To/From/CC/BCC), including markdown wrappers.
+    header_pattern = re.compile(
+        r"^\s*(?:[*_`#>\-\s]*)?(subject|to|from|cc|bcc)\s*:\s*.+$",
+        flags=re.IGNORECASE,
+    )
+    cleaned_lines = [ln for ln in lines if not header_pattern.match(ln.strip())]
+
+    cleaned = "\n".join(cleaned_lines).strip()
+    # Collapse excessive leading blank lines after header removal.
+    cleaned = re.sub(r"^\s*\n+", "", cleaned, flags=re.MULTILINE).strip()
+    return cleaned or raw
 
 
 async def _build_personalized_fallback_response(
@@ -430,12 +464,11 @@ def _normalize_simple_query(text: str) -> str:
 
 
 def _get_simple_response(message: str) -> str | None:
+    # Outreach mode hard-lock: do not emit generic chat responses.
+    # Let the outreach pipeline generate a copy-ready output instead.
     normalized = _normalize_simple_query(message)
     if normalized in _SIMPLE_QUERIES:
-        return (
-            "Hi! I can help with outreach drafts, research summaries, and general questions. "
-            "Tell me what you want to do."
-        )
+        return None
     return None
 
 
@@ -671,6 +704,7 @@ async def agent_chat_stream(request: AgentRequest, http_request: Request):
         # 4. Stream and Capture Response
         async def stream_and_persist():
             full_response = ""
+            response_seen = False
             tool_calls = []
             
             # Send initial thread_id event if needed by frontend (optional)
@@ -687,10 +721,12 @@ async def agent_chat_stream(request: AgentRequest, http_request: Request):
                 if chunk.startswith("data: "):
                     try:
                         data = json.loads(chunk[6:])
-                        if "content" in data:
+                        if data.get("type") == "response" and "content" in data:
                             full_response += data["content"]
-                        # We might parse tool calls here if needed, but simplified for now
-                        # Ideally, stream_agent_response should yield structured events we can capture
+                            response_seen = True
+                        elif not response_seen and data.get("type") == "done" and "content" in data:
+                            # Fallback if upstream only emits done with final text.
+                            full_response = data["content"]
                     except:
                         pass
                 yield chunk
@@ -766,7 +802,7 @@ async def writer_chat_stream(request: AgentRequest):
         }
 
         try:
-            async for event in deep_research_graph.astream({"topic": request.message}, config=config):
+            async for event in stream_deep_research(request.message, config=config):
                 if not event:
                     continue
 
@@ -794,7 +830,7 @@ async def writer_chat_stream(request: AgentRequest):
 
             final_article = emitted_article.strip()
             if not final_article:
-                final_state = await deep_research_graph.ainvoke({"topic": request.message}, config=config)
+                final_state = await run_deep_research(request.message, config=config)
                 final_article = (_state_get(final_state, "final_article", "") or "").strip()
                 if not final_article:
                     final_article = _compose_draft_sections(_state_get(final_state, "draft_sections", {}))
@@ -1147,7 +1183,7 @@ async def sarge_voice(request: SargeVoiceRequest):
     if not _ensure_sarge_loaded():
         raise HTTPException(status_code=503, detail=f"SARGE unavailable: {SARGE_IMPORT_ERROR}")
 
-    text = request.text
+    text = _extract_tts_body_text(request.text)
     email = request.email
     if not text:
         raise HTTPException(status_code=400, detail="Text is required")

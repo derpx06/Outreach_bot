@@ -841,7 +841,7 @@ export default function OutreachChat({ mode = "outreach" }) {
       content: "",
       tool_calls: [],
       tool_results: [],
-      thoughts: ["[SYSTEM] Initializing agent..."]
+      thoughts: []
     };
 
     setMessages(prev => [...prev, initialAssistantMsg]);
@@ -908,6 +908,10 @@ export default function OutreachChat({ mode = "outreach" }) {
                   setStreamingContent(msg.content);
                 }
                 else if (data.type === "thought") {
+                  if (!isWriterMode) {
+                    // Outreach mode intentionally hides internal agent process logs.
+                    return newMessages;
+                  }
                   const thoughtText = typeof data.content === 'object'
                     ? JSON.stringify(data.content)
                     : data.content;
@@ -951,12 +955,16 @@ export default function OutreachChat({ mode = "outreach" }) {
                     }
 
                     if (parsed) {
+                      const inputLc = (originalInput || "").toLowerCase();
+                      const preferredOutreach =
+                        inputLc.includes("linkedin")
+                          ? (parsed.linkedin_dm || parsed.linkedin)
+                          : (parsed.whatsapp || parsed.linkedin_dm || parsed.linkedin);
+
                       msg.generated_content = {
                         email: parsed.email,
-                        whatsapp: parsed.whatsapp,
-                        sms: parsed.sms,
-                        linkedin: parsed.linkedin_dm || parsed.linkedin,
-                        instagram: parsed.instagram_dm || parsed.instagram
+                        whatsapp: inputLc.includes("linkedin") ? undefined : preferredOutreach,
+                        linkedin: inputLc.includes("linkedin") ? preferredOutreach : undefined
                       };
                     }
                   }
@@ -1352,8 +1360,7 @@ export default function OutreachChat({ mode = "outreach" }) {
                                 />
                               )
                             ) : (
-                              ((isStreaming && i === messages.length - 1) ||
-                                (msg.tool_calls?.length > 0 || msg.tool_results?.length > 0 || msg.thoughts?.length > 0 || msg.active_node)) && (
+                              ((msg.tool_calls?.length > 0 || msg.tool_results?.length > 0 || msg.thoughts?.length > 0 || msg.active_node)) && (
                                 <div className={`mb-4 w-full ${isWriterMode ? "max-w-4xl" : "max-w-2xl"} flex flex-col gap-0 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 backdrop-blur-md ${isWriterMode ? "bg-[#120d08]/90 border border-amber-300/15" : "bg-[#0F0F0F] border border-white/5"}`}>
 
                                   {/* 1. HEADER & PROGRESS STEPS */}

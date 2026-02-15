@@ -753,7 +753,6 @@ Rules:
         }
 
     # Shared Definitions for Single and Multi-channel
-    wants_subject = "subject" in instruction.lower() and "body" in instruction.lower()
     
     topic_lock = task_topic_lock or ''
     topic_lock_section = ''
@@ -769,6 +768,26 @@ You may use professional templates/openers, BUT they must be infused with specif
 - The tone must be unique to the prospect's style.
 - Every sentence should feel hand-crafted, not copy-pasted.
 """
+
+    def ensure_email_subject(email_text: str) -> str:
+        raw = (email_text or "").strip()
+        if not raw:
+            return raw
+        if re.search(r"(?im)^\s*subject\s*:", raw):
+            return raw
+
+        body = re.sub(r"(?im)^\s*body\s*:\s*", "", raw).strip()
+        topic = (task_topic_lock or strategy.goal or "").strip()
+        if topic:
+            subject = f"Quick note on {topic}"
+        elif prospect.company and prospect.company.lower() not in {"unknown", "n/a"}:
+            subject = f"Quick note for {prospect.company}"
+        else:
+            subject = "Quick note"
+        subject = re.sub(r"\s+", " ", subject).strip().rstrip(".")
+        if len(subject) > 70:
+            subject = subject[:67].rstrip() + "..."
+        return f"Subject: {subject}\n\n{body}"
 
     async def generate_channel(channel: str) -> tuple[str, str]:
         if channel == "general_response":
@@ -792,8 +811,8 @@ USER REQUEST:
         comments = f"FIX: {critique.feedback}" if (critique and not critique.passed) else ""
 
         subject_note = ""
-        if channel == "email" and wants_subject:
-            subject_note = "Output format:\nSubject: <short subject>\nBody: <email body>\n"
+        if channel == "email":
+            subject_note = "Output format (MANDATORY):\nSubject: <short subject>\nBody: <email body>\n"
 
         # --- NEW: Build topic lock and template ban sections ---
         topic_lock = task_topic_lock or ''
@@ -970,6 +989,7 @@ STRICT CONSTRAINTS:
 1. JSON OUTPUT ONLY. Keys: {channels_to_generate}
 2. NO generic phrases ("I noticed...", "Hope you're well").
 3. Email must follow Context -> Intent -> Value -> Action.
+4. If email is present, it MUST begin with: "Subject: ...".
 
 OUTPUT FORMAT:
 {{
@@ -1003,6 +1023,8 @@ OUTPUT FORMAT:
 
     new_drafts = current_drafts.copy()
     for channel, content in results:
+        if channel == "email":
+            content = ensure_email_subject(content)
         new_drafts[channel] = content
         logs.append(f"SCRIBE: {channel} drafted.")
 

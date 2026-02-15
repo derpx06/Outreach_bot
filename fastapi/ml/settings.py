@@ -4,11 +4,23 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-# Load environment variables from .env file
-# Adjusted to look in the current directory or parent directories if needed
-env_path = Path(__file__).resolve().parent.parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+
+def _load_env() -> None:
+    """
+    Prefer `fastapi/.env`, then fallback to repo-root `.env`.
+    """
+    settings_file = Path(__file__).resolve()
+    candidates = [
+        settings_file.parent.parent / ".env",         # fastapi/.env
+        settings_file.parent.parent.parent / ".env",  # repo/.env
+    ]
+    for env_path in candidates:
+        if env_path.exists():
+            load_dotenv(dotenv_path=env_path)
+            break
+
+
+_load_env()
 
 
 def _detect_best_torch_device() -> str:
@@ -73,9 +85,10 @@ class Settings:
         self.OPENAI_MAX_TOKEN_WINDOW = int(os.getenv("OPENAI_MAX_TOKEN_WINDOW", "8192"))
 
         # LangSmith Configuration
-        self.LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
-        self.LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
-        self.LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "Deep-Psych Agent")
+        tracing_raw = os.getenv("LANGCHAIN_TRACING_V2") or os.getenv("LANGSMITH_TRACING", "false")
+        self.LANGCHAIN_TRACING_V2 = tracing_raw.lower() == "true"
+        self.LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY")
+        self.LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT", "Deep-Psych Agent")
 
 
 settings = Settings()

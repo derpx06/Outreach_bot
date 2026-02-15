@@ -1,7 +1,8 @@
-from typing import List
+from typing import Any, AsyncGenerator, Dict, List
 
 from langgraph.constants import Send
 from langgraph.graph import END, StateGraph
+from langsmith import traceable
 
 from .configuration import Configuration
 from .nodes import orchestrator, planner, research_worker, writer, publisher
@@ -51,6 +52,22 @@ workflow.add_conditional_edges(
 workflow.add_edge("publisher", END)
 
 graph = workflow.compile()
+
+
+@traceable(name="Run Deep Research Writer")
+async def run_deep_research(topic: str, config: Dict[str, Any] | None = None) -> AgentState:
+    cfg = config or {}
+    return await graph.ainvoke({"topic": topic}, config=cfg)
+
+
+@traceable(name="Stream Deep Research Writer")
+async def stream_deep_research(
+    topic: str,
+    config: Dict[str, Any] | None = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    cfg = config or {}
+    async for event in graph.astream({"topic": topic}, config=cfg):
+        yield event
 
 if __name__ == "__main__":
     print(graph.get_graph().draw_mermaid())

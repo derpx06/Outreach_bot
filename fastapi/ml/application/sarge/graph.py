@@ -76,6 +76,7 @@ def create_sarge_graph():
     workflow.add_node("writer", writer_node)
     workflow.add_node("critic", critic_node)
     workflow.add_node("editor", editor_node)
+    workflow.add_node("fallback", fallback_node)
     workflow.add_node("clarification", clarification_node) # NEW: Low confidence
     workflow.add_node("style_inferrer", style_inferrer_node) # NEW: Phase 3 Style Transfer
     workflow.add_node("voice", voice_node) # NEW: TTS Audio Generation
@@ -288,6 +289,7 @@ async def run_sarge(user_input: str, session_id: str = None) -> dict:
     return result
 
 
+@traceable(name="Stream SARGE")
 async def stream_sarge(user_input: str, session_id: str = None):
     """
     Stream SARGE execution with granular events (microprocesses)
