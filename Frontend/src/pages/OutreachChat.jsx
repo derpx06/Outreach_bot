@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Mail, Phone, X, Loader2, Sparkles, ChevronRight, ChevronLeft, Volume2, Settings2, Paperclip } from "lucide-react";
+import { Send, Mail, Phone, X, Loader2, Sparkles, ChevronRight, ChevronLeft, Volume2, Settings2, Paperclip, Search } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 import MessageAudioPlayer from "../components/thread/messages/MessageAudioPlayer";
@@ -11,6 +11,7 @@ import WriterProcessingPanel from "../components/writer/WriterProcessingPanel";
 import ContactInputStep from "../components/ContactInputStep";
 import ChatSidebar from "../components/ChatSidebar";
 import { motion, AnimatePresence } from "framer-motion";
+import { GoogleSearchModal } from "../components/GoogleSearchModal";
 
 const CarouselContainer = ({ children }) => {
   const scrollRef = useRef(null);
@@ -179,6 +180,8 @@ export default function OutreachChat({ mode = "outreach" }) {
   const [hasStarted, setHasStarted] = useState(false);
   const [agentStatus, setAgentStatus] = useState("Idle");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed as per request
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // --- LOGIC STATE ---
   // --- LOGIC STATE ---
@@ -1033,6 +1036,12 @@ export default function OutreachChat({ mode = "outreach" }) {
         }
         return prev;
       });
+      // Trigger Google Search Modal
+      setSearchQuery(contact.name);
+      setShowSearchModal(true);
+
+
+
       // Reset cursor focus logic if needed, typically input auto-focuses
     }
   };
@@ -1161,6 +1170,17 @@ export default function OutreachChat({ mode = "outreach" }) {
         >
           {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
+
+        {/* Search Sidebar Toggle (Right Side) */}
+        {searchQuery && !showSearchModal && (
+          <button
+            onClick={() => setShowSearchModal(true)}
+            className="absolute top-4 right-4 z-50 p-2 bg-[#1A1A1A]/80 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors shadow-lg pointer-events-auto flex items-center gap-2 animate-in fade-in zoom-in-95"
+            title="Open Search Sidebar"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        )}
 
         {/* --- STATE 1: INTRO SCREEN --- */}
         {!hasStarted ? (
@@ -1956,6 +1976,13 @@ export default function OutreachChat({ mode = "outreach" }) {
           onCancel={() => setActiveSendFlow(null)}
         />
       )}
+
+      {/* Google Search Modal */}
+      <GoogleSearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        query={searchQuery}
+      />
     </div>
   );
 }
