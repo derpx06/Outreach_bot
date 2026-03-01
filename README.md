@@ -1,6 +1,6 @@
-# Xenia26
+# Outreach bot
 
-Xenia26 is a multi-service AI outreach platform:
+OutreachAI is a multi-service AI outreach platform:
 - `Frontend/`: React chat UI with outreach channel preview cards (Email, LinkedIn, WhatsApp).
 - `backend/`: Node/Express API for auth, contacts, user profile, and send actions.
 - `fastapi/`: FastAPI + LangGraph agent system for research, drafting, streaming, and TTS.
