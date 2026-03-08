@@ -19,7 +19,7 @@
   <tr>
     <td align="center" width="50%">
       <img src="https://github.com/user-attachments/assets/bd29cb55-7511-4be7-91d8-8be8bb3d2a7a" alt="Outreach Chat UI" width="100%"/>
-      <br/><sub><b>Outreach Chat — Start a new conversation</b></sub>
+      <br/><sub><b>Outreach Dashboard — A complete analysis of Leads</b></sub>
     </td>
     <td align="center" width="50%">
       <img src="https://github.com/user-attachments/assets/73e9b3ed-4634-4737-9401-9c380bd54edf" alt="Multi-Channel Draft Cards" width="100%"/>
