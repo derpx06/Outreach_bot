@@ -6,6 +6,7 @@
 <img width="2560" height="1460" alt="image" src="https://github.com/user-attachments/assets/55aa36d3-238d-41bf-a862-ddc995c5fcb4" />
 <img width="2560" height="1460" alt="image" src="https://github.com/user-attachments/assets/283dec38-e86f-4e52-a029-28514c00a985" />
 <img width="2560" height="1460" alt="image" src="https://github.com/user-attachments/assets/f0d6fe30-98e5-487b-b340-97246f906749" />
+<img width="2560" height="1460" alt="image" src="https://github.com/user-attachments/assets/7fcfaa32-7656-4522-ac33-63cfefa9d852" />
 
 OutreachAI is a multi-service AI outreach platform:
 - `Frontend/`: React chat UI with outreach channel preview cards (Email, LinkedIn, WhatsApp).
