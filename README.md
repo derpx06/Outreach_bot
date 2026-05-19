@@ -241,6 +241,7 @@ flowchart TD
 
 #### State Schema
 
+
 ```python
 class AgentState(TypedDict):
     topic: str                        # The user's writing request
